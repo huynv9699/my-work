@@ -1,0 +1,124 @@
+---
+
+- hosts: prometheus
+  vars_files:
+    - ./properties/alert_rules
+  tasks:
+    - name: Include prometheus role
+      include_role:
+        name: ../../../apps/prometheus
+  vars:
+    prometheus_version: 2.33.5
+    prometheus_user: prometheus
+    prometheus_group: "{{ prometheus_user }}"
+
+    prometheus_data_dir: /u01/data/prometheus
+    prometheus_app_dir: /u01/apps/prometheus
+
+    # Prometheus settings
+    prometheus_scrape_interval: 15s
+    prometheus_evaluation_interval: 1m
+    prometheus_scrape_timeout: 10s
+    prometheus_tsdb_retention_time: 7d
+    prometheus_tsdb_retention_size: 20GB
+    prometheus_bind_interface: eth1
+    prometheus_bind_address: "{{ hostvars[inventory_hostname]['ansible_' + prometheus_bind_interface]['ipv4']['address'] }}"
+    prometheus_listen_port: 9090
+    prometheus_network_host: false
+    prometheus_external_labels:
+      - origin_prometheus: "example"
+    prometheus_remote_write_urls:
+      # - http://10.255.56.186:8050/api/v1/write
+      # - http://10.207.58.62:8480/insert/0/prometheus
+      # testing
+      - http://127.0.0.1:9999/api/v1/write
+    alertmanager_endpoint: "10.0.20.21:9093"
+
+    # Name the people, who are in charge of these Prometheus alerts!!!
+    # When pic is not assigned, then these alerts will be disabled.
+    prometheus_pic: "@phuochc"
+    node_pic: "@phuochc"
+    mysqld_pic: ""
+    redis_pic: "@phuochc"
+    kafka_pic: ""
+    logstash_pic: ""
+    aerospike_pic: ""
+    elasticsearch_pic: ""
+
+    # host_alias will be in /etc/hosts
+    host_alias: [{name: "node1", ip: "10.0.20.21"}, {name: "node2", ip: "10.0.20.22"}, {name: "node3", ip: "10.0.20.23"}]
+
+    # Prometheus scrape configs
+    prometheus_scrape_configs:
+      ## Prometheus itself
+      - job_name: "prometheus"
+        static_configs:
+          - targets: ['node1:9090']
+            labels:
+              app: prometheus
+      ## Node exporter
+      - job_name: "node_exporter"
+        static_configs:
+          - targets: ["node1:9100", "node2:9100"]
+            labels:
+              my: label
+          - targets: ["node3:9100"]
+            labels:
+              # my: label
+              your: label
+      ## Mariadb exporter
+      - job_name: 'mariadb_loyalty'
+        static_configs:
+          - targets: ["node1:9104", "node2:9104", "node3:9104"]
+            labels:
+              app: mariadb
+              group: loyalty
+      ## Redis exporter
+      - job_name: "redis_exporter_sample_targets"
+        static_configs:
+          - targets: ["redis://10.0.20.21:6379", "redis://10.0.20.22:6379", "redis://10.0.20.23:6379"]
+        metrics_path: /scrape
+        relabel_configs:
+          - source_labels: [__address__]
+            target_label: __param_target
+          - source_labels: [__param_target]
+            target_label: instance
+          - target_label: __address__
+            replacement: 10.0.20.23:9121
+      - job_name: 'redis_exporter'
+        static_configs:
+          - targets:
+              - 10.0.20.23:9121
+      ## Kafka exporter \
+      ## TODO: phuochc Add JMX exporter for Kafka
+      - job_name: "kafka_exporter"
+        static_configs:
+          - targets: ["node1:9308", "node2:9308", "node3:9308"]
+            labels:
+              app: kafka
+      ## Aerospike exporter
+      - job_name: "aerospike"
+        static_configs:
+          - targets: ["node1:9145", "node2:9145", "node3:9145"]
+            labels:
+              app: aerospike
+      ## ElasticSearch exporter
+      - job_name: "elasticsearch_exporter"
+        static_configs:
+          - targets: ["node1:9114", "node2:9114", "node3:9114"]
+            labels:
+              app: elasticsearch
+      ## Minio exporter
+      - job_name: "minio_exporter"
+        # bearer_token: <secret>
+        metrics_path: /minio/v2/metrics/cluster
+        # metrics_path: "/minio/prometheus/metrics" for older version
+        scheme: http
+        static_configs:
+          - targets: ['node1:9000']
+      ## cAdvisor exporter
+      - job_name: "cadvisor_exporter"
+        static_configs:
+          - targets: ["node1:21040"]
+            labels:
+              app: cadvisor

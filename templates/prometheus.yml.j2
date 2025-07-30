@@ -1,0 +1,43 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{{ ansible_managed | comment }}
+
+# Global config
+global:
+  scrape_interval:     {{ prometheus_scrape_interval | default('1m') }}
+  evaluation_interval: {{ prometheus_evaluation_interval | default('1m') }}
+  scrape_timeout:      {{ prometheus_scrape_timeout | default('10s') }}
+{% if prometheus_external_labels is defined %}
+  external_labels:
+  {% for label in prometheus_external_labels %}
+    {% for key, value in label.items() %}
+    {{ key }}: {{ value }}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+
+{% if prometheus_remote_write_urls is defined %}
+remote_write:
+  {% for item in prometheus_remote_write_urls %}
+  - url: {{ item }}
+    queue_config:
+      max_samples_per_send: 10000
+      max_shards: 100
+  {% endfor %}
+{% endif %}
+
+{% if alertmanager_endpoint is defined %}
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - {{ alertmanager_endpoint }}
+{% endif %}
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "alert.d/*.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+scrape_configs:
+  {{ prometheus_scrape_configs | to_nice_yaml(indent=2) | indent(2,False) }}

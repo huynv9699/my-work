@@ -1,0 +1,39 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=Prometheus monitoring service.
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+ExecStartPre=-/usr/bin/docker rm --force %N
+
+ExecStart=/usr/bin/docker run \
+  -v {{ prometheus_app_dir }}:/etc/prometheus \
+  -v {{ prometheus_data_dir }}:/prometheus \
+{% if prometheus_network_host == true %}
+  --network=host \
+{% else %}
+  -p {{ prometheus_listen_port }}:9090 \
+{% endif %}
+  --rm=true \
+  --name=%N \
+  --stop-timeout=30 \
+  --user={{ prometheus_uid }}:{{ prometheus_gid }} \
+{% for item in host_alias %}
+  --add-host {{ item.name }}:{{ item.ip }} \
+{% endfor %}
+  prom/prometheus:v{{ prometheus_version }} \
+  --config.file=/etc/prometheus/prometheus.yml \
+{% if prometheus_network_host == true %}
+  --web.listen-address=0.0.0.0:{{ prometheus_listen_port }} \
+{% endif %}
+  --storage.tsdb.path=/prometheus \
+  --storage.tsdb.retention.time={{ prometheus_tsdb_retention_time }} \
+  --storage.tsdb.retention.size={{ prometheus_tsdb_retention_size }}
+ExecStop=/usr/bin/docker stop %N
+
+[Install]
+WantedBy=multi-user.target

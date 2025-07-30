@@ -1,0 +1,62 @@
+---
+# tasks file for prometheus
+
+- name: configure | add config for prometheus
+  become: true
+  template:
+    src: "prometheus.yml.j2"
+    dest: "{{ prometheus_app_dir }}/prometheus.yml"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: 0644
+
+- name: configure | copy rule files
+  become: true
+  template:
+    src: "{{ item }}"
+    dest: "{{ prometheus_app_dir }}/alert.d/{{ item | basename | regex_replace('\\.j2','') }}"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: 0644
+  with_fileglob:
+    - "../templates/alert_rules/*.yml.j2"
+  when: "{{ item | basename | regex_replace('\\_rules.yml.j2','') }}_pic is defined"
+
+- name: configure | get uid and gid for prometheus user
+  become: true
+  getent:
+    database: passwd
+
+- name: configure | set uid and gid for prometheus user
+  set_fact:
+    prometheus_uid: "{{ getent_passwd[item].1 }}"
+    prometheus_gid: "{{ getent_passwd[item].2 }}"
+  with_items: "{{ prometheus_user }}"
+
+- name: configure | create systemd service
+  become: true
+  template:
+    src: "prometheus.service.j2"
+    dest: "/etc/systemd/system/prometheus.service"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: configure | check configuration file
+  command: "docker run \
+            -v {{ prometheus_app_dir }}:/etc/prometheus \
+            --rm=true \
+            --user={{ prometheus_uid }}:{{ prometheus_gid }} \
+            --entrypoint /bin/promtool \
+            prom/prometheus:v{{ prometheus_version }} \
+            check config /etc/prometheus/prometheus.yml"
+  register: result
+
+- name: configure | start prometheus service
+  become: true
+  systemd:
+    daemon_reload: true
+    name: prometheus
+    enabled: true
+    state: restarted
+  when: result is succeeded

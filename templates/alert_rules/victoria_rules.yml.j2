@@ -1,0 +1,9 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% if victoria_pic is defined and victoria_pic|length %}
+# {{ ansible_managed }}
+
+{%   if victoria_metric_rules is defined and victoria_metric_rules|length %}
+groups:
+{{ victoria_metric_rules | to_nice_yaml | indent(2, true) }}
+{%   endif %}
+{% endif %}

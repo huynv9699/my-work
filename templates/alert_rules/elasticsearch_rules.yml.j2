@@ -1,0 +1,9 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% if elasticsearch_pic is defined and elasticsearch_pic|length %}
+# {{ ansible_managed }}
+
+{%   if   elasticsearch_rules is defined and elasticsearch_rules|length %}
+groups:
+{{ elasticsearch_rules | to_nice_yaml | indent(2, true) }}
+{%   endif %}
+{% endif %}

@@ -1,0 +1,9 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% if kafka_pic is defined and kafka_pic|length %}
+# {{ ansible_managed }}
+
+{%   if kafka_rules is defined and kafka_rules|length %}
+groups:
+{{ kafka_rules | to_nice_yaml | indent(2, true) }}
+{%   endif %}
+{% endif %}

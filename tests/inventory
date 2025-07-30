@@ -1,0 +1,7 @@
+all:
+  children:
+    prometheus:
+      hosts:
+        10.0.20.21:
+      vars:
+        ansible_ssh_user: vagrant

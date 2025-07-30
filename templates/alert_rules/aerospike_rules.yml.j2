@@ -1,0 +1,9 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% if aerospike_pic is defined and aerospike_pic|length %}
+# {{ ansible_managed }}
+
+{%   if aerospike_rules is defined and aerospike_rules|length %}
+groups:
+{{ aerospike_rules | to_nice_yaml | indent(2, true) }}
+{%   endif %}
+{% endif %}

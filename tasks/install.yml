@@ -1,0 +1,50 @@
+---
+# tasks file for prometheus
+
+- name: install | create prometheus group
+  become: true
+  group:
+    name: "{{ prometheus_group }}"
+    system: true
+    state: present
+
+- name: install | create prometheus user
+  become: true
+  user:
+    name: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    append: true
+    state: present
+    shell: /bin/false
+    system: true
+    create_home: false
+    home: /
+
+- name: install | create prometheus configuration directories
+  become: true
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: 0770
+  with_items:
+    - "{{ prometheus_app_dir }}"
+    - "{{ prometheus_app_dir }}/alert.d"
+
+- name: install | create prometheus data directory
+  become: true
+  file:
+    path: "{{ prometheus_data_dir }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: 0755
+
+# TODO: uncomment when proxy connection is allowed
+# - name: install | download prometheus image 
+#   command: "docker pull prom/prometheus:v{{ prometheus_version }}"
+#   register: _download_docker_image
+#   until: _download_docker_image is succeeded
+#   retries: 5
+#   delay: 2

@@ -1,0 +1,9 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% if mysqld_pic is defined and mysqld_pic|length %}
+# {{ ansible_managed }}
+
+{%   if mysql_rules is defined and mysql_rules|length %}
+groups:
+{{ mysql_rules | to_nice_yaml | indent(2, true) }}
+{%   endif %}
+{% endif %}

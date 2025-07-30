@@ -1,0 +1,9 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% if redis_pic is defined and redis_pic|length > 0 %}
+# {{ ansible_managed }}
+
+{%   if redis_rules is defined and redis_rules|length > 0 %}
+groups:
+{{ redis_rules | to_nice_yaml | indent(2, true) }}
+{%   endif %}
+{% endif %}

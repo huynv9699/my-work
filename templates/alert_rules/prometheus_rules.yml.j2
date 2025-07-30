@@ -1,0 +1,9 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% if prometheus_pic is defined and prometheus_pic|length %}
+# {{ ansible_managed }}
+
+{%   if prometheus_rules is defined and prometheus_rules|length %}
+groups:
+{{ prometheus_rules | to_nice_yaml | indent(2, true) }}
+{%   endif %}
+{% endif %}
